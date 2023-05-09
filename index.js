@@ -1,1 +1,2 @@
-console.log('Hello, world'bcdedit /set hypervisorlaunchtype off);
+
+console.log('Hello, world');
