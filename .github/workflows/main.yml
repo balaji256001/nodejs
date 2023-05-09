@@ -36,7 +36,7 @@ jobs:
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
         chmod 600 private_key.pem
-        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude '.git*' --exclude 'private_key.pem' . $USER@$HOST:$TEMP_DIR   
+        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude 'node_modules' --exclude '.git*' --exclude 'private_key.pem' . $USER@$HOST:$TEMP_DIR   
         ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo mv $TEMP_DIR/* $TARGET_DIR"
         ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "cd $TARGET_DIR && npm install && pm2 start index.js --name application-test"
         rm -f private_key.pem
