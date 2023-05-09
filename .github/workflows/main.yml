@@ -26,18 +26,17 @@ jobs:
 
   
    
-
     - name: Deploy to EC2
       env:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
-        TARGET_DIR: /var/www/html/
+        TEMP_DIR: /path/to/your/temp/directory
+        TARGET_DIR: /path/to/your/target/directory
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
         chmod 600 private_key.pem
-        
-        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude '.git*' --exclude 'node_modules' . $USER@$HOST:name: tmp/artifacts/
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo chown -R www-data:www-data $TARGET_DIR"
+        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude '.git*' --exclude 'node_modules' . $USER@$HOST:$TEMP_DIR   
+        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo mv $TEMP_DIR/* $TARGET_DIR"
         ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "cd $TARGET_DIR && npm install && pm2 restart your-app-name"
         rm -f private_key.pem
