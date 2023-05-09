@@ -31,8 +31,8 @@ jobs:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
-        TEMP_DIR: /path/to/your/temp/directory
-        TARGET_DIR: /path/to/your/target/directory
+        TEMP_DIR: /temp/
+        TARGET_DIR: /var/www/html/
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
         chmod 600 private_key.pem
