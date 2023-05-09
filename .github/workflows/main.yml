@@ -31,7 +31,7 @@ jobs:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
-        TEMP_DIR: /tmp/
+        TEMP_DIR: /tmp/artifacts/
         TARGET_DIR: /var/www/html/
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
