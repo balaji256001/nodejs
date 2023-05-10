@@ -17,7 +17,7 @@ jobs:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
-        TARGET_DIR: /var/app/
+        TARGET_DIR: /tmp/artifacts/
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
         chmod 600 private_key.pem
