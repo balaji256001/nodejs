@@ -1,5 +1,4 @@
 # .github/workflows/nodejs.yml
-
 name: Node.js CI/CD
 on:
   push:
@@ -17,10 +16,11 @@ jobs:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
-        TARGET_DIR: /tmp/artifacts/
+        TEMP_DIR: /tmp/artifacts/
+        TARGET_DIR: /var/app/
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
         chmod 600 private_key.pem
-        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude 'node_modules' --exclude '.git*' . $USER@$HOST:$TARGET_DIR
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo chown -R $USER:$USER $TARGET_DIR && sudo chmod -R 755 $TARGET_DIR && cd $TARGET_DIR && npm install && pm2 start index.js --name application-test -f"
+        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude 'node_modules' --exclude '.git*' . $USER@$HOST:$TEMP_DIR
+        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo mkdir app && sudo chown -R $USER:$USER $TARGET_DIR && sudo chmod -R 755 $TARGET_DIR && sudo mv $TEMP_DIR/* $TARGET_DIR && cd $TARGET_DIR && npm install && pm2 start index.js --name application-test -f"
         rm -f private_key.pem
