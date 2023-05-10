@@ -1,7 +1,6 @@
 # .github/workflows/nodejs.yml
 
 name: Node.js CI/CD
-
 on:
   push:
     branches:
@@ -9,35 +8,19 @@ on:
   workflow_dispatch:
 jobs:
   build-and-deploy:
-
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-
-    - name: Set up Node.js 14.x
-      uses: actions/setup-node@v2
-      with:
-        node-version: 14.x
-
-    - name: Install dependencies
-      run: npm install
-
-  
-   
     - name: Deploy to EC2
       env:
         PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
-        TEMP_DIR: /tmp/artifacts/
-        TARGET_DIR: /var/www/html/
+        TARGET_DIR: /var/app/
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
         chmod 600 private_key.pem
-        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude 'node_modules' --exclude '.git*' --exclude 'private_key.pem' . $USER@$HOST:$TEMP_DIR   
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo chown -R $USER:$USER $TARGET_DIR && sudo chmod -R 755 $TARGET_DIR"
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo mv $TEMP_DIR/* $TARGET_DIR"
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "cd $TARGET_DIR && npm install && pm2 start index.js --name application-test -f"
+        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude 'node_modules' --exclude '.git*' . $USER@$HOST:$TARGET_DIR
+        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo chown -R $USER:$USER $TARGET_DIR && sudo chmod -R 755 $TARGET_DIR && cd $TARGET_DIR && npm install && pm2 start index.js --name application-test -f"
         rm -f private_key.pem
