@@ -32,7 +32,7 @@ jobs:
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
         TEMP_DIR: /tmp/artifacts/
-        TARGET_DIR: /var/www/html/
+        TARGET_DIR: /var/app/
       run: |
         echo "$PRIVATE_KEY" > private_key.pem
         chmod 600 private_key.pem
