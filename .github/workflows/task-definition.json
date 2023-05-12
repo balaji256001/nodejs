@@ -32,7 +32,7 @@
         }
     ],
     "family": "ecs-test",
-    "taskRoleArn": "arn:aws:iam::445400024379:role/none",
+    "taskRoleArn": "arn:aws:iam::445400024379:role/ecsservicerole",
     "executionRoleArn": "arn:aws:iam::445400024379:role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
     "revision": 1,
