@@ -1,43 +1,69 @@
-# .github/workflows/nodejs.yml
-
-name: Node.js CI/CD
+name: Deploy to Amazon ECS
 
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:
-jobs:
-  build-and-deploy:
+      - "main"
 
+env:
+  AWS_REGION: us-east-1                  # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY: demo123          # set this to your Amazon ECR repository name
+  ECS_SERVICE: dummy                # set this to your Amazon ECS service name
+  ECS_CLUSTER: TESTING                 # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: .github/workflows/task-definition.json      # set this to the path to your Amazon ECS task definition                                           # file, e.g. .aws/task-definition.json
+  CONTAINER_NAME: demo123           # set this to the name of the container in the
+                                               # containerDefinitions section of your task definition
+         # set this to the name of the container in the
+                                               # containerDefinitions section of your task definition
+
+permissions:
+  id-token: write
+  contents: read # This is required for actions/checkout@v2
+
+jobs:
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Set up Node.js 14.x
-      uses: actions/setup-node@v2
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        node-version: 14.x
+        role-to-assume:  arn:aws:iam::445400024379:role/ecsInstanceRole
+        role-session-name: ecsInstanceRole
+        aws-region: ${{ env.AWS_REGION }}
 
-    - name: Install dependencies
-      run: npm install
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-  
-   
-    - name: Deploy to EC2
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
       env:
-        PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-        HOST: ${{ secrets.EC2_HOST }}
-        USER: ${{ secrets.EC2_USER }}
-        TEMP_DIR: /tmp/artifacts/
-        TARGET_DIR: /var/app/
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-        echo "$PRIVATE_KEY" > private_key.pem
-        chmod 600 private_key.pem
-        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude 'node_modules' --exclude '.git*' --exclude 'private_key.pem' . $USER@$HOST:$TEMP_DIR   
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo chown -R $USER:$USER $TARGET_DIR && sudo chmod -R 755 $TARGET_DIR"
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo mv $TEMP_DIR/* $TARGET_DIR"
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "cd $TARGET_DIR && npm install && pm2 restart index.js --name application-test -f"
-        rm -f private_key.pem
+        # Build a docker container and
+        # push it to ECR so that it can
+        # be deployed to ECS.
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: tru
