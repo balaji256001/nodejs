@@ -1,31 +1,20 @@
 name: Deploy to Amazon ECS
-
 on:
   push:
     branches:
-      - "main"
+      - "master"
   workflow_dispatch:
 env:
-  AWS_REGION: us-east-1                  # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: demo123          # set this to your Amazon ECR repository name
-  ECS_SERVICE: xyzz12            # set this to your Amazon ECS service name
-  ECS_CLUSTER: TESTING7                 # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: .github/workflows/task-definition.json      # set this to the path to your Amazon ECS task definition                                           # file, e.g. .aws/task-definition.json
-  CONTAINER_NAME: nodejs          # set this to the name of the container in the
-                                               # containerDefinitions section of your task definition
-         # set this to the name of the container in the
-                                               # containerDefinitions section of your task definition
-
-permissions:
-  id-token: write
-  contents: read # This is required for actions/checkout@v2
-
+  ECR_REPOSITORY:  ${{ vars.ECR_REPOSITORY }}        
+  ECS_SERVICE:  ${{ vars.ECS_SERVICE }}           
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}                  
+  ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION }} 
+  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }} 
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     environment: production
-
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -35,32 +24,37 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-2
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'   
+    - name: Install Dependencies
+      run: npm install # if you are using npm and a package-lock.json
+    - name: Run Tests
+      run: npm test # if you have a test script in your package.json
+    - name: Build
+      run: npm run build --if present
     - name: Login to Amazon ECR
       id: login-ecr
-    
       run: |
         aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 445400024379.dkr.ecr.us-east-2.amazonaws.com
-
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
       run: |
-        docker build -t 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest .
-        docker push 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest
-        echo "::set-output name=image::445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest"
-
-
+        docker build -t 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{vars.ECR_REPOSITORY}}:latest .
+        docker push 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{vars.ECR_REPOSITORY}}:latest
+        echo "::set-output name=image::445400024379.dkr.ecr.us-east-2.amazonaws.com/${{vars.ECR_REPOSITORY}}:latest"
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        task-definition: ${{ vars.ECS_TASK_DEFINITION }} 
         container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-image.outputs.image }}
-
+        image: 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest"
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: tru
+   
