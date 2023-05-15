@@ -9,7 +9,8 @@ env:
   ECR_REPOSITORY: demo123         
   ECS_SERVICE: eerrf             
   ECS_CLUSTER: TESTING11                 
-  ECS_TASK_DEFINITION: .github/workflows/task-definition.json                                           
+  ECS_TASK_DEFINITION: .github/workflows/task-definition.json
+  CONTAINER_NAME: nodejs 
 jobs:
   deploy:
     name: Deploy
