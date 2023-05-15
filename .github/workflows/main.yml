@@ -57,10 +57,15 @@ jobs:
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
 
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: tru
+   
+    - name: Register the new task definition
+      id: register-task-def
+      run: |
+        TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://${{ steps.task-def.outputs.task-definition }})
+        echo "TASK_DEF=$TASK_DEF" >> $GITHUB_ENV
+
+    - name: Run new task using the updated task definition
+      run: |
+        FAMILY=$(echo $TASK_DEF | jq -r .taskDefinition.family)
+        REVISION=$(echo $TASK_DEF | jq -r .taskDefinition.revision)
+        aws ecs run-task --cluster ${{ env.ECS_CLUSTER }} --task-definition $FAMILY:$REVISION
