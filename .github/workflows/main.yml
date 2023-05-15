@@ -5,12 +5,12 @@ on:
       - "master"
   workflow_dispatch:
 env:
-  AWS_REGION: us-east-1                  
-  ECR_REPOSITORY: demo123         
-  ECS_SERVICE: eerrf             
-  ECS_CLUSTER: TESTING11                 
-  ECS_TASK_DEFINITION: .github/workflows/task-definition.json
-  CONTAINER_NAME: nodejs 
+              
+  ECR_REPOSITORY:  ${{ vars.ECR_REPOSITORY }}        
+  ECS_SERVICE:  ${{ vars.ECS_SERVICE }}           
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}                  
+  ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION }} 
+  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }} 
 jobs:
   deploy:
     name: Deploy
