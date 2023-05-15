@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" ",
     "start": "node index.js",
-    "build":"echo \"no build steps"\"
+    "build":"echo \"no build steps\""
   },
   "keywords": [],
   "author": "",
