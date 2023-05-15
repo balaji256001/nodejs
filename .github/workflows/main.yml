@@ -1,5 +1,4 @@
 name: Deploy to Amazon ECS
-
 on:
   push:
     branches:
@@ -11,17 +10,11 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}                  
   ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION }} 
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }} 
-
-permissions:
-  id-token: write
-  contents: read # This is required for actions/checkout@v2
-
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     environment: production
-
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -33,18 +26,13 @@ jobs:
         aws-region: us-east-2
     - name: Login to Amazon ECR
       id: login-ecr
-    
       run: |
         aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 445400024379.dkr.ecr.us-east-2.amazonaws.com
-
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
       run: |
-        docker build -t 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest .
-        docker push 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest
-        
-
-
+        docker build -t 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{ env.ECR_REPOSITORY}}:latest .
+        docker push 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{ env.ECR_REPOSITORY}}:latest
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -52,11 +40,10 @@ jobs:
         task-definition: ${{ env.ECS_TASK_DEFINITION }}
         container-name: ${{ env.CONTAINER_NAME }}
         image: 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{ env.ECR_REPOSITORY}}:latest
-
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: tru
+        
