@@ -5,7 +5,6 @@ on:
       - "master"
   workflow_dispatch:
 env:
-              
   ECR_REPOSITORY:  ${{ vars.ECR_REPOSITORY }}        
   ECS_SERVICE:  ${{ vars.ECS_SERVICE }}           
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}                  
@@ -28,15 +27,7 @@ jobs:
     - name: Setup Node.js environment
       uses: actions/setup-node@v2
       with:
-        node-version: '14'   # Specify the Node.js version
-    - name: Cache Node.js modules
-      uses: actions/cache@v2
-      with:
-        path: ~/.npm  # npm cache files are stored in `~/.npm` on Linux/macOS
-        key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.OS }}-node-
-          ${{ runner.OS }}-
+        node-version: '14'   
     - name: Install Dependencies
       run: npm install # if you are using npm and a package-lock.json
     - name: Run Tests
@@ -66,4 +57,4 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
+   
