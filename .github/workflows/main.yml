@@ -58,8 +58,8 @@ jobs:
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
+        service: ${{ vars.ECS_SERVICE }}
+        cluster: ${{ vars.ECS_CLUSTER }} 
         codedeploy-appspec: ${{env.CODEDEPLOY_APPSPEC}}
         codedeploy-application: ${{env.CODEDEPLOY_APPLICATION}}
         codedeploy-deployment-group: ${{env.CODEDEPLOY_DG}}     
