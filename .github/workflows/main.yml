@@ -3,14 +3,7 @@ on:
   push:
     branches:
       - "main"
-  workflow_dispatch:
-env:
-  AWS_REGION: us-west-1                  
-  ECR_REPOSITORY: demo123         
-  ECS_SERVICE: blu-green            
-  ECS_CLUSTER: TESTING11             
-  ECS_TASK_DEFINITION: .github/workflows/task-definition.json                                                 # file, e.g. .aws/task-definition.json
-  CONTAINER_NAME: nodejs          
+  workflow_dispatch:        
 jobs:
   deploy:
     name: Deploy
@@ -32,16 +25,15 @@ jobs:
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
       run: |
-        docker build -t 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest .
-        docker push 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest
-        echo "::set-output name=image::445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest"
+        docker build -t 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{ env.ECR_REPOSITORY}}:latest .
+        docker push 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{ env.ECR_REPOSITORY}}:latest
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-        task-definition: ${{ env.ECS_TASK_DEFINITION }}
-        container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-image.outputs.image }}
+        task-definition: ${{ vars.ECS_TASK_DEFINITION }}
+        container-name: ${{ vars.CONTAINER_NAME }}
+        image: 445400024379.dkr.ecr.us-east-2.amazonaws.com/${{ env.ECR_REPOSITORY}}:latest 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
