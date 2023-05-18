@@ -10,6 +10,9 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}                  
   ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION }} 
   CONTAINER_NAME: ${{ vars.CONTAINER_NAME }} 
+  CODEDEPLOY_APPSPEC: ${{vars.appspec}}
+  CODEDEPLOY_APPLICATION: ${{vars.codedeployapplication}}
+  CODEDEPLOY_DG: ${{vars.deploymentgroup}}
 jobs:
   deploy:
     name: Deploy
@@ -49,4 +52,6 @@ jobs:
         task-definition: ${{ vars.ECS_TASK_DEFINITION }}
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
-        
+        codedeploy-appspec: ${{env.CODEDEPLOY_APPSPEC}}
+        codedeploy-application: ${{env.CODEDEPLOY_APPLICATION}}
+        codedeploy-deployment-group: ${{env.CODEDEPLOY_DG}}        
