@@ -1,28 +1,21 @@
 name: Deploy to Amazon ECS
-
 on:
   push:
     branches:
       - "main"
   workflow_dispatch:
 env:
-  AWS_REGION: us-west-1                  # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: demo123          # set this to your Amazon ECR repository name
-  ECS_SERVICE: blu-green            # set this to your Amazon ECS service name
-  ECS_CLUSTER: TESTING11                 # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: .github/workflows/task-definition.json      # set this to the path to your Amazon ECS task definition                                           # file, e.g. .aws/task-definition.json
-  CONTAINER_NAME: nodejs          # set this to the name of the container in the
-                                               # containerDefinitions section of your task definition
-         # set this to the name of the container in the
-                                               # containerDefinitions section of your task definition
-
-
+  AWS_REGION: us-west-1                  
+  ECR_REPOSITORY: demo123         
+  ECS_SERVICE: blu-green            
+  ECS_CLUSTER: TESTING11             
+  ECS_TASK_DEFINITION: .github/workflows/task-definition.json                                                 # file, e.g. .aws/task-definition.json
+  CONTAINER_NAME: nodejs          
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     environment: production
-
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -34,18 +27,14 @@ jobs:
         aws-region: us-east-2
     - name: Login to Amazon ECR
       id: login-ecr
-    
       run: |
         aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 445400024379.dkr.ecr.us-east-2.amazonaws.com
-
     - name: Build, tag, and push image to Amazon ECR
       id: build-image
       run: |
         docker build -t 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest .
         docker push 445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest
         echo "::set-output name=image::445400024379.dkr.ecr.us-east-2.amazonaws.com/demo123:latest"
-
-
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -53,13 +42,12 @@ jobs:
         task-definition: ${{ env.ECS_TASK_DEFINITION }}
         container-name: ${{ env.CONTAINER_NAME }}
         image: ${{ steps.build-image.outputs.image }}
-
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
+        service: ${{ vars.ECS_SERVICE }}
+        cluster: ${{ vars.ECS_CLUSTER }}
         codedeploy-appspec: appspec.json
         codedeploy-application: just-testing1
         codedeploy-deployment-group: green
