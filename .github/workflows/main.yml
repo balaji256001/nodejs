@@ -4,13 +4,6 @@ on:
     branches:
       - "main"
   workflow_dispatch:
-env:
-  AWS_REGION: us-west-1                  
-  ECR_REPOSITORY: demo123         
-  ECS_SERVICE: blu-green            
-  ECS_CLUSTER: TESTING11             
-  ECS_TASK_DEFINITION: .github/workflows/task-definition.json                                                 # file, e.g. .aws/task-definition.json
-  CONTAINER_NAME: nodejs          
 jobs:
   deploy:
     name: Deploy
