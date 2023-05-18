@@ -60,6 +60,6 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
-        codedeploy-appspec: appspec.json
-        codedeploy-application: just-testing1
-        codedeploy-deployment-group: green
+        codedeploy-appspec: ${{env.CODEDEPLOY_APPSPEC}}
+        codedeploy-application: ${{env.CODEDEPLOY_APPLICATION}}
+        codedeploy-deployment-group: ${{env.CODEDEPLOY_DG}}     
