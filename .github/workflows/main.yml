@@ -59,6 +59,7 @@ jobs:
         rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --exclude='.git' --exclude='node_modules' ./ ubuntu@18.117.252.235:/home/ubuntu/project_tmp/
     - name: Move and Mount Files
       run: |
+        echo "Private IP: $PRIVATE_IP"
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@18.117.252.235 "\
         sudo mkdir -p /mnt/efs && \
         export ATTEMPTS=0
