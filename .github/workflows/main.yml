@@ -58,7 +58,7 @@ jobs:
       run: |
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
         chmod 600 private_key.pem
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@*** "\
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@ 18.117.252.235"\
         export PRIVATE_IP=\$PRIVATE_IP; \
         export AWS_ACCESS_KEY_ID=\$AWS_ACCESS_KEY_ID; \
         export AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_ACCESS_KEY; \
