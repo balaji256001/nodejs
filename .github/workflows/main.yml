@@ -58,7 +58,7 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
     - name: Sync code to target machine
       run: |
-        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz code.tar.gz ubuntu@18.117.252.235:/mnt/efs/
+        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --rsync-path='sudo rsync' code.tar.gz ubuntu@18.117.252.235:/mnt/efs/
     - name: Execute remote SSH commands
       run: |
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@18.117.252.235 "export PRIVATE_IP=${{ env.PRIVATE_IP }} && \
