@@ -58,10 +58,10 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
     - name: Sync code to target machine
       run: |
-        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --rsync-path='sudo rsync' code.tar.gz ubuntu@18.117.252.235:/mnt/efs/
+        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --rsync-path='sudo rsync' code.tar.gz ubuntu@18.117.252.235:/tmp/
     - name: Execute remote SSH commands
       run: |
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@18.117.252.235 "export PRIVATE_IP=${{ env.PRIVATE_IP }} && \
-        sudo mkdir -p /mnt/efs && \
+        sudo mv /tmp/code.tar.gz /mnt/efs/
         sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 \$PRIVATE_IP:/ /mnt/efs && \
         sudo tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
