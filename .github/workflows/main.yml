@@ -34,7 +34,20 @@ jobs:
 
     - name: Create EFS Filesystem and Mount Target
       run: |
-        # Existing code to create EFS Filesystem and Mount Target here
+        export FILE_SYSTEM_ID=$(aws efs create-file-system --creation-token $(date +%s) --region ${{ secrets.AWS_REGION }} --query 'FileSystemId' --output text)
+        echo "FILE_SYSTEM_ID=$FILE_SYSTEM_ID" >> $GITHUB_ENV
+        while [[ $(aws efs describe-file-systems --file-system-id $FILE_SYSTEM_ID --query 'FileSystems[0].LifeCycleState' --output text) != "available" ]]; do
+          echo "Waiting for EFS filesystem to become available..."
+          sleep 10
+        done
+        export MOUNT_TARGET_ID=$(aws efs create-mount-target --file-system-id $FILE_SYSTEM_ID --subnet-id ${{ secrets.SUBNET_ID }} --region ${{ secrets.AWS_REGION }} --query 'MountTargetId' --output text)
+        while [[ $(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].LifeCycleState' --output text) != "available" ]]; do
+          echo "Waiting for EFS mount target to become available..."
+          sleep 10
+        done
+        export NETWORK_INTERFACE_ID=$(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].NetworkInterfaceId' --output text)
+        export PRIVATE_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID --query 'NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress' --output text)
+        echo "PRIVATE_IP=$PRIVATE_IP" >> $GITHUB_ENV
 
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.4.1
