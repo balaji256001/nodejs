@@ -37,13 +37,14 @@ jobs:
           echo "Waiting for EFS filesystem to become available..."
           sleep 10
         done
-        aws efs create-mount-target --file-system-id $FILE_SYSTEM_ID --subnet-id ${{ secrets.SUBNET_ID }} --region ${{ secrets.AWS_REGION }}
-    - name: Check DNS resolution
-      run: |
-        while ! nslookup ${FILE_SYSTEM_ID}.efs.${{ secrets.AWS_REGION }}.amazonaws.com; do
-          echo "Waiting for DNS resolution of EFS filesystem..."
+        export MOUNT_TARGET_ID=$(aws efs create-mount-target --file-system-id $FILE_SYSTEM_ID --subnet-id ${{ secrets.SUBNET_ID }} --region ${{ secrets.AWS_REGION }} --query 'MountTargetId' --output text)
+        while [[ $(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].LifeCycleState' --output text) != "available" ]]; do
+          echo "Waiting for EFS mount target to become available..."
           sleep 10
         done
+        export NETWORK_INTERFACE_ID=$(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].NetworkInterfaceId' --output text)
+        export PRIVATE_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID --query 'NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress' --output text)
+        echo "PRIVATE_IP=$PRIVATE_IP" >> $GITHUB_ENV
     - name: Upload code to S3
       run: |
         tar -zcvf code.tar.gz --exclude='./.git' *
@@ -56,4 +57,4 @@ jobs:
       run: |
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
         chmod 600 private_key.pem
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} "sudo apt-get -y update && sudo apt-get -y install nfs-common && sudo mkdir -p /mnt/efs && sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${FILE_SYSTEM_ID}.efs.${{ secrets.AWS_REGION }}.amazonaws.com:/ /mnt/efs && aws s3 cp s3://${{ secrets.S3_BUCKET }}/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} "sudo apt-get -y update && sudo apt-get -y install nfs-common && sudo mkdir -p /mnt/efs && sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $PRIVATE_IP:/ /mnt/efs && aws s3 cp s3://${{ secrets.S3_BUCKET }}/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
