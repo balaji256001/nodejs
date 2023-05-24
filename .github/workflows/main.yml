@@ -47,8 +47,10 @@ jobs:
       uses: webfactory/ssh-agent@v0.4.1
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-    - name: Mount EFS and Copy code from S3 to EFS
+    - name: Execute remote ssh commands
       run: |
-        ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} "sudo mkdir -p /mnt/efs && sudo mount -t efs ${FILE_SYSTEM_ID}:/ /mnt/efs && aws s3 cp s3://${{ secrets.S3_BUCKET }}/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
+         echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+         chmod 600 private_key.pem
+         ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} "sudo apt-get -y update && sudo apt-get -y install nfs-common && sudo mkdir -p /mnt/efs && sudo mount -t efs ${FILE_SYSTEM_ID}:/ /mnt/efs && aws s3 cp s3://***/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
 
   
