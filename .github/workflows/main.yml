@@ -57,4 +57,4 @@ jobs:
       run: |
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
         chmod 600 private_key.pem
-        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} " sudo mkdir -p /mnt/efs && sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $PRIVATE_IP:/ /mnt/efs && aws s3 cp s3://${{ secrets.S3_BUCKET }}/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
+        ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} "PRIVATE_IP=${{ env.PRIVATE_IP }} AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} sudo mkdir -p /mnt/efs && sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 \$PRIVATE_IP:/ /mnt/efs && aws s3 cp s3://${{ secrets.S3_BUCKET }}/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
