@@ -51,6 +51,6 @@ jobs:
       run: |
          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
          chmod 600 private_key.pem
-         ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} "sudo apt-get -y update && sudo apt-get -y install nfs-common && sudo mkdir -p /mnt/efs && sudo mount -t efs ${FILE_SYSTEM_ID}:/ /mnt/efs && aws s3 cp s3://***/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
+         ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} "sudo apt-get -y update && sudo apt-get -y install nfs-common && sudo mkdir -p /mnt/efs && sudo mount -t /mnt/efs ${FILE_SYSTEM_ID}:/ /mnt/efs && aws s3 cp s3://***/code.tar.gz /mnt/efs/code.tar.gz && tar -zxvf /mnt/efs/code.tar.gz -C /mnt/efs"
 
   
