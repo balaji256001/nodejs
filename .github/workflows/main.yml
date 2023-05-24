@@ -33,7 +33,12 @@ jobs:
       run: |
         export FILE_SYSTEM_ID=$(aws efs create-file-system --creation-token $(date +%s) --region ${{ secrets.AWS_REGION }} --query 'FileSystemId' --output text)
         echo "FILE_SYSTEM_ID=$FILE_SYSTEM_ID" >> $GITHUB_ENV
+        while [[ $(aws efs describe-file-systems --file-system-id $FILE_SYSTEM_ID --query 'FileSystems[0].LifeCycleState' --output text) != "available" ]]; do
+        echo "Waiting for EFS filesystem to become available..."
+        sleep 10
+        done
         aws efs create-mount-target --file-system-id $FILE_SYSTEM_ID --subnet-id ${{ secrets.SUBNET_ID }} --region ${{ secrets.AWS_REGION }}
+ 
     - name: Upload code to S3
       run: |
         tar -zcvf code.tar.gz .
