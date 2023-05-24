@@ -41,7 +41,7 @@ jobs:
  
     - name: Upload code to S3
       run: |
-        tar -zcvf code.tar.gz .
+        tar -zcvf code.tar.gz --exclude='./.git' *
         aws s3 cp code.tar.gz s3://${{ secrets.S3_BUCKET }}/code.tar.gz
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.4.1
