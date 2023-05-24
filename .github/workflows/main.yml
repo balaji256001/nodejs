@@ -58,9 +58,89 @@ jobs:
       run: |
         rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --exclude='.git' --exclude='node_modules' ./ ubuntu@18.117.252.235:/home/ubuntu/project_tmp/
 
-    - name: Move code to EFS
+       name: Node.js CI/CD
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Set up Node.js 14.x
+      uses: actions/setup-node@v2
+      with:
+        node-version: 14.x
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build and test
       run: |
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@18.117.252.235 "\
-        sudo mkdir -p /mnt/efs && \
-        sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 \$PRIVATE_IP:/ /mnt/efs && \
+        npm run build --if-present
+        npm run test --if-present
+
+    - name: Create EFS Filesystem and Mount Target
+      run: |
+        export FILE_SYSTEM_ID=$(aws efs create-file-system --creation-token $(date +%s) --region ${{ secrets.AWS_REGION }} --query 'FileSystemId' --output text)
+        echo "FILE_SYSTEM_ID=$FILE_SYSTEM_ID" >> $GITHUB_ENV
+        while [[ $(aws efs describe-file-systems --file-system-id $FILE_SYSTEM_ID --query 'FileSystems[0].LifeCycleState' --output text) != "available" ]]; do
+          echo "Waiting for EFS filesystem to become available..."
+          sleep 10
+        done
+        export MOUNT_TARGET_ID=$(aws efs create-mount-target --file-system-id $FILE_SYSTEM_ID --subnet-id ${{ secrets.SUBNET_ID }} --region ${{ secrets.AWS_REGION }} --query 'MountTargetId' --output text)
+        while [[ $(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].LifeCycleState' --output text) != "available" ]]; do
+          echo "Waiting for EFS mount target to become available..."
+          sleep 10
+        done
+        export NETWORK_INTERFACE_ID=$(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].NetworkInterfaceId' --output text)
+        export PRIVATE_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID --query 'NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress' --output text)
+        echo "PRIVATE_IP=$PRIVATE_IP" >> $GITHUB_ENV
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.4.1
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Rsync code to server
+      run: |
+        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --exclude='.git' --exclude='node_modules' ./ ubuntu@18.117.252.235:/home/ubuntu/project_tmp/
+
+     - name: Move and Mount Files
+       run: |
+         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@18.117.252.235 "\
+         sudo mkdir -p /mnt/efs && \
+         export ATTEMPTS=0
+         while true; do
+           if [[ \$ATTEMPTS -ge 18 ]]; then
+             echo 'Mount operation failed after 3 minutes, exiting...'
+             exit 1
+           fi
+         if sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 \$PRIVATE_IP:/ /mnt/efs; then
+           echo 'Mount operation succeeded!'
+         break
+         else
+           echo 'Mount operation failed, waiting 10 seconds before retrying...'
+           let ATTEMPTS=ATTEMPTS+1
+          sleep 10
+         fi
+        done && \
         sudo mv /home/ubuntu/project_tmp/* /mnt/efs/"
+
+
+ 
+
+
+ 
