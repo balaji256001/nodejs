@@ -1,20 +1,23 @@
-# .github/workflows/nodejs.yml
-
-name: Node.js CI/CD
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   build-and-deploy:
-
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Set up Node.js 14.x
       uses: actions/setup-node@v2
@@ -24,20 +27,47 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-  
-   
-    - name: Deploy to EC2
-      env:
-        PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-        HOST: ${{ secrets.EC2_HOST }}
-        USER: ${{ secrets.EC2_USER }}
-        TEMP_DIR: /tmp/artifacts/
-        TARGET_DIR: /var/app/
+    - name: Build and test
       run: |
-        echo "$PRIVATE_KEY" > private_key.pem
-        chmod 600 private_key.pem
-        rsync -avz -e "ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --exclude 'node_modules' --exclude '.git*' --exclude 'private_key.pem' . $USER@$HOST:$TEMP_DIR   
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo chown -R $USER:$USER $TARGET_DIR && sudo chmod -R 755 $TARGET_DIR"
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "sudo mv $TEMP_DIR/* $TARGET_DIR"
-        ssh -i private_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@$HOST "cd $TARGET_DIR && npm install && pm2 restart index.js --name application-test -f"
-        rm -f private_key.pem
+        npm run build --if-present
+        npm run test --if-present
+
+    - name: Create EFS Filesystem and Mount Target
+      run: |
+        export FILE_SYSTEM_ID=$(aws efs create-file-system --creation-token $(date +%s) --region ${{ secrets.AWS_REGION }} --query 'FileSystemId' --output text)
+        echo "FILE_SYSTEM_ID=$FILE_SYSTEM_ID" >> $GITHUB_ENV
+        while [[ $(aws efs describe-file-systems --file-system-id $FILE_SYSTEM_ID --query 'FileSystems[0].LifeCycleState' --output text) != "available" ]]; do
+          echo "Waiting for EFS filesystem to become available..."
+          sleep 10
+        done
+        export MOUNT_TARGET_ID=$(aws efs create-mount-target --file-system-id $FILE_SYSTEM_ID --subnet-id ${{ secrets.SUBNET_ID }} --region ${{ secrets.AWS_REGION }} --query 'MountTargetId' --output text)
+        while [[ $(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].LifeCycleState' --output text) != "available" ]]; do
+          echo "Waiting for EFS mount target to become available..."
+          sleep 10
+        done
+        export NETWORK_INTERFACE_ID=$(aws efs describe-mount-targets --mount-target-id $MOUNT_TARGET_ID --query 'MountTargets[0].NetworkInterfaceId' --output text)
+        export PRIVATE_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $NETWORK_INTERFACE_ID --query 'NetworkInterfaces[0].PrivateIpAddresses[0].PrivateIpAddress' --output text)
+        echo "PRIVATE_IP=$PRIVATE_IP" >> $GITHUB_ENV
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.4.1
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Rsync code to server
+      run: |
+        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --exclude='.git' --exclude='node_modules' ./ ubuntu@18.117.252.235:/home/ubuntu/project_tmp/
+    - name: Move and Mount Files
+      run: |
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@18.117.252.235 "\
+        sudo mkdir -p /mnt/efs && \
+        sleep 30 && \ 
+        if sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $PRIVATE_IP:/ /mnt/efs; then
+          sudo mv /home/ubuntu/project_tmp/* /mnt/efs/
+        else
+          echo 'Mount command failed.'
+          exit 1
+        fi
+        cd /mnt/efs && npm install && pm2 start index.js --name application-test -f 
+        "
+
