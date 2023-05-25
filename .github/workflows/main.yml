@@ -68,6 +68,6 @@ jobs:
           echo 'Mount command failed.'
           exit 1
         fi
-        cd /mnt/efs && npm install && pm2 restart index.js --name application-test -f && sudo systemctl restart apache2
+        cd /mnt/efs && npm install && pm2 start index.js --name application-test -f 
         "
 
