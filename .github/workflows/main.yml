@@ -56,18 +56,18 @@ jobs:
 
     - name: Rsync code to server
       run: |
-        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --exclude='.git' --exclude='node_modules' ./ ubuntu@18.117.252.235:/home/ubuntu/project_tmp/
+        rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -avz --exclude='.git' --exclude='node_modules' ./ ubuntu@18.117.252.235:${{vars.TEMPDIR}}
     - name: Move and Mount Files
       run: |
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@18.117.252.235 "\
-        sudo mkdir -p /mnt/efs && \
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{secrets.EC2_USER}}@${{secrets.EC2_IP}} "\
+        sudo mkdir -p ${{ vars.TARGDIR}} && \
         sleep 30 && \ 
         if sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $PRIVATE_IP:/ /mnt/efs; then
-          sudo mv /home/ubuntu/project_tmp/* /mnt/efs/
+          sudo mv ${{vars.TEMPDIR}}* /mnt/efs/
         else
           echo 'Mount command failed.'
           exit 1
         fi
-        cd /mnt/efs && npm install && pm2 start index.js --name application-test -f 
+        cd ${{ vars.TARGDIR}} && npm install && pm2 start index.js --name application-test -f 
         "
 
